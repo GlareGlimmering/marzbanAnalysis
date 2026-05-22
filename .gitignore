@@ -1,0 +1,23 @@
+xray-monitor-backend
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+node_modules/
+dist/
+.env.local
+.env.*.local
+
+*.log
+xray_access.log
+data.db
+data/
+store/data/
+
+# 忽略系统临时文件
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  xray-monitor:
+    # 🌍 直接从 GitHub 镜像仓库拉取已经做好的成品
+    image: ghcr.io/GlareGlimmering/marzbanAnalysis:latest
+    container_name: xray-monitor
+    restart: always
+    ports:
+      - "127.0.0.1:10000:10000"
+    volumes:
+      - /var/lib/marzban/xray_access.log:/var/lib/marzban/xray_access.log:ro
+      - ./data:/app/store/data
+    environment:
+      - TZ=Asia/Shanghai
