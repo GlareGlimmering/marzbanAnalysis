@@ -38,56 +38,56 @@ COPY --from=backend-builder /app/backend/xray-monitor-backend /app/xray-monitor-
 # 复制前端打包后的静态资源到 Nginx 默认目录
 COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
 
-# 覆盖 Nginx 配置文件（支持前端路由及 API 内部反代）
-RUN echo ' \
-server { \
-    listen 10000; \
-    server_name localhost; \
-    \
-    # 前端静态页面 \
-    location / { \
-        root /usr/share/nginx/html; \
-        index index.html; \
-        try_files $uri $uri/ /index.html; \
-    } \
-    \
-    # 后端 API 反代 \
-    location /api/ { \
-        proxy_pass http://127.0.0.1:8080; \
-        proxy_set_header Host $host; \
-        proxy_set_header X-Real-IP $remote_addr; \
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
-    } \
-}' > /etc/nginx/http.d/default.conf
+# 覆盖 Nginx 配置文件（标准 EOF 写入，拒绝空行）
+RUN cat << 'EOF' > /etc/nginx/http.d/default.conf
+server {
+    listen 10000;
+    server_name localhost;
 
-# 使用 Supervisor 同时守护 Go 后端和 Nginx 前端进程
-# 使用 Supervisor 同时守护 Go 后端和 Nginx 前端进程（完美修复版）
-RUN echo ' \
-[supervisord] \
-nodaemon=true \
-user=root \
-pidfile=/var/run/supervisord.pid \
-logfile=/dev/null \
-logfile_maxbytes=0 \
-\
-[program:backend] \
-command=/app/xray-monitor-backend \
-autostart=true \
-autorestart=true \
-stdout_logfile=/dev/stdout \
-stdout_logfile_maxbytes=0 \
-stderr_logfile=/dev/stderr \
-stderr_logfile_maxbytes=0 \
-\
-[program:nginx] \
-command=nginx -g "daemon off;" \
-autostart=true \
-autorestart=true \
-stdout_logfile=/dev/stdout \
-stdout_logfile_maxbytes=0 \
-stderr_logfile=/dev/stderr \
-stderr_logfile_maxbytes=0 \
-' > /etc/supervisord.conf
+    # 前端静态页面
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 后端 API 反代
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+EOF
+
+# 使用 Supervisor 同时守护进程（标准 EOF 写入，绝无格式地雷）
+RUN cat << 'EOF' > /etc/supervisord.conf
+[supervisord]
+nodaemon=true
+user=root
+pidfile=/var/run/supervisord.pid
+logfile=/dev/null
+logfile_maxbytes=0
+
+[program:backend]
+command=/app/xray-monitor-backend
+autostart=true
+autorestart=true
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+
+[program:nginx]
+command=nginx -g "daemon off;"
+autostart=true
+autorestart=true
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stderr
+stderr_logfile_maxbytes=0
+EOF
 
 # 创建可能需要的日志空目录（防御性）
 RUN mkdir -p /var/lib/marzban
