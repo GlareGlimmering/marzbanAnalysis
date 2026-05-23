@@ -3,7 +3,6 @@ package main
 import (
 	"io"
 	"log"
-	"os"
 	"xray-monitor/parser"
 	"xray-monitor/store"
 
