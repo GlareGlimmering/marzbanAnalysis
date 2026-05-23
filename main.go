@@ -1,12 +1,15 @@
 package main
 
 import (
-	fiber "github.com/gofiber/fiber/v2"                // 💡 在前面显式加上别名 fiber
-	cors "github.com/gofiber/fiber/v2/middleware/cors" // 💡 显式加上别名 cors
-	"github.com/hpcloud/tail"
+	"io"
 	"log"
+	"os"
 	"xray-monitor/parser"
 	"xray-monitor/store"
+
+	fiber "github.com/gofiber/fiber/v2"
+	cors "github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/hpcloud/tail"
 )
 
 func main() {
@@ -15,12 +18,16 @@ func main() {
 	// 1. 初始化本地数据库
 	store.InitDB("data.db")
 
-	// 2. 利用 Goroutine 将日志异步监听移至后台，不阻塞主 Web 线程
+	// 2. 利用 Goroutine 将日志异步监听移至后台，从头扫描并持续追更
 	go func() {
+		log.Println("📥 正在执行历史日志全量扫描初始化...")
+
 		config := tail.Config{
 			Follow:    true,
 			ReOpen:    true,
 			MustExist: true,
+			// 💡 核心注入：指定从文件绝对头部 (0 字节位置) 开始向下狂飙
+			Location: &tail.SeekInfo{Offset: 0, Whence: io.SeekStart},
 		}
 
 		t, err := tail.TailFile("/var/lib/marzban/xray_access.log", config)
@@ -28,6 +35,7 @@ func main() {
 			log.Fatalf("❌ 无法监听日志文件: %v", err)
 		}
 
+		// 开启事务优化批量写入性能（可选，但对于几十M的日志初始入库速度极快）
 		for line := range t.Lines {
 			record, ok := parser.ParseLine(line.Text)
 			if ok {
@@ -54,7 +62,7 @@ func main() {
 		return c.JSON(stats)
 	})
 
-	// 🛠️ 接口 2: 获取图表所需的排行数据 (升级版)
+	// 🛠️ 接口 2: 获取图表所需的排行数据
 	app.Get("/api/charts", func(c *fiber.Ctx) error {
 		userRanks, outboundRanks, inboundRanks, targetMaps, err := store.GetTopStats()
 		if err != nil {
@@ -63,12 +71,12 @@ func main() {
 		return c.JSON(fiber.Map{
 			"user_rank":     userRanks,
 			"outbound_rank": outboundRanks,
-			"inbound_rank":  inboundRanks, // 🆕 新增
-			"target_map":    targetMaps,   // 🆕 新增
+			"inbound_rank":  inboundRanks,
+			"target_map":    targetMaps,
 		})
 	})
 
-	// 🛠️ 接口 4 (升级版): 传入用户和IP，获取双重过滤下的目标排行
+	// 🛠️ 接口 4: 传入用户和IP，获取双重过滤下的目标排行
 	app.Get("/api/ip-targets", func(c *fiber.Ctx) error {
 		email := c.Query("email")
 		ip := c.Query("ip")
@@ -92,6 +100,6 @@ func main() {
 		return c.JSON(hierarchy)
 	})
 
-	// 4. 监听本地 8080 端口（后期在生产环境只需用 CF Tunnel 穿透此端口即可）
+	// 4. 监听本地 8080 端口
 	log.Fatal(app.Listen(":8080"))
 }
