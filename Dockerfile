@@ -61,12 +61,14 @@ server { \
 }' > /etc/nginx/http.d/default.conf
 
 # 使用 Supervisor 同时守护 Go 后端和 Nginx 前端进程
+# 使用 Supervisor 同时守护 Go 后端和 Nginx 前端进程（完美修复版）
 RUN echo ' \
-[supervisorctl] \
-\
-[supervisor] \
+[supervisord] \
 nodaemon=true \
 user=root \
+pidfile=/var/run/supervisord.pid \
+logfile=/dev/null \
+logfile_maxbytes=0 \
 \
 [program:backend] \
 command=/app/xray-monitor-backend \
