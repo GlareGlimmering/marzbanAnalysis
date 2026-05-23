@@ -80,6 +80,15 @@
                       :class="['ip-btn', { 'is-selected': selectedEmail === user.email && selectedIP === ip }]"
                   >
                     <span>{{ ip }}</span>
+                    <span
+                        title="复制 IP"
+                        role="button"
+                        aria-label="复制 IP"
+                        @click.stop="copyInboundIP(ip)"
+                        style="margin-left: auto; margin-right: 8px; font-size: 12px; opacity: 0.78; cursor: pointer; user-select: none;"
+                    >
+                      {{ copiedIP === ip ? '已复制' : '📋' }}
+                    </span>
                     <span v-if="selectedEmail === user.email && selectedIP === ip" class="active-dot"></span>
                   </button>
                 </div>
@@ -151,6 +160,7 @@ const selectedEmail = ref<string>('');
 const selectedIP = ref<string>('');
 const expandedUsers = ref<Set<string>>(new Set());
 const ipSpecificTargets = ref<any[]>([]);
+const copiedIP = ref<string>('');
 
 const rawInboundData = ref<any[]>([]);
 const rawOutboundData = ref<any[]>([]);
@@ -179,13 +189,28 @@ const selectEntity = async (email: string, ip: string) => {
   }
 };
 
+const copyInboundIP = async (ip: string) => {
+  try {
+    await navigator.clipboard.writeText(ip);
+    copiedIP.value = ip;
+    window.setTimeout(() => {
+      if (copiedIP.value === ip) copiedIP.value = '';
+    }, 1200);
+  } catch (err) {
+    console.error('复制 IP 失败:', err);
+  }
+};
+
 const fetchData = async () => {
   try {
     const overRes = await fetch('/api/overview');
     if (overRes.ok) overview.value = await overRes.json();
 
     const hierarchyRes = await fetch('/api/user-hierarchy');
-    if (hierarchyRes.ok) userHierarchy.value = await hierarchyRes.json();
+    if (hierarchyRes.ok) {
+      const hierarchyData = await hierarchyRes.json();
+      userHierarchy.value = hierarchyData.sort((a: any, b: any) => a.email.localeCompare(b.email));
+    }
 
     const chartRes = await fetch('/api/charts');
     if (chartRes.ok) {
@@ -251,7 +276,7 @@ const renderCharts = () => {
         type: 'pie',
         radius: ['40%', '70%'],
         center: ['50%', '50%'],
-        roseType: 'radius',
+        minAngle: 15,
         avoidLabelOverlap: true,
         itemStyle: { borderRadius: 6, borderColor: '#0d111c', borderWidth: 2 },
         label: {
@@ -301,7 +326,7 @@ const renderCharts = () => {
         type: 'pie',
         radius: ['40%', '70%'],
         center: ['50%', '50%'],
-        roseType: 'radius',
+        minAngle: 15,
         avoidLabelOverlap: true,
         itemStyle: { borderRadius: 6, borderColor: '#0d111c', borderWidth: 2 },
         label: {
