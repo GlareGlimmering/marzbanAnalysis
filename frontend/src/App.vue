@@ -160,7 +160,7 @@ const selectEntity = async (email: string, ip: string) => {
   selectedEmail.value = email;
   selectedIP.value = ip;
   try {
-    const res = await fetch(`http://localhost:8080/api/ip-targets?email=${encodeURIComponent(email)}&ip=${encodeURIComponent(ip)}`);
+    const res = await fetch(`/api/ip-targets?email=${encodeURIComponent(email)}&ip=${encodeURIComponent(ip)}`);
     if (res.ok) {
       ipSpecificTargets.value = await res.json();
     }
@@ -172,15 +172,15 @@ const selectEntity = async (email: string, ip: string) => {
 const fetchData = async () => {
   try {
     // 1. 获取顶栏指标
-    const overRes = await fetch('http://localhost:8080/api/overview');
+    const overRes = await fetch('/api/overview');
     if (overRes.ok) overview.value = await overRes.json();
 
     // 2. 获取用户级联关系
-    const hierarchyRes = await fetch('http://localhost:8080/api/user-hierarchy');
+    const hierarchyRes = await fetch('/api/user-hierarchy');
     if (hierarchyRes.ok) userHierarchy.value = await hierarchyRes.json();
 
     // 3. 抓取图表排行并进行全自动字段映射清洗
-    const chartRes = await fetch('http://localhost:8080/api/charts');
+    const chartRes = await fetch('/api/charts');
     if (chartRes.ok) {
       const resData = await chartRes.json();
 
@@ -207,7 +207,7 @@ const fetchData = async () => {
         await selectEntity(firstUser.email, firstUser.ips[0]);
       }
     } else if (selectedEmail.value && selectedIP.value) {
-      const res = await fetch(`http://localhost:8080/api/ip-targets?email=${encodeURIComponent(selectedEmail.value)}&ip=${encodeURIComponent(selectedIP.value)}`);
+      const res = await fetch(`/api/ip-targets?email=${encodeURIComponent(selectedEmail.value)}&ip=${encodeURIComponent(selectedIP.value)}`);
       if (res.ok) ipSpecificTargets.value = await res.json();
     }
 
