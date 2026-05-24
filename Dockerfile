@@ -22,77 +22,27 @@ COPY . .
 RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o xray-monitor-backend main.go
 
 # ==========================================
-# 第三阶段：最终生产镜像（整合前端 Nginx + 后端 Go）
+# 第三阶段：最终生产镜像（纯净 Go 驱动版本，告别 Nginx/Supervisor 冲突）
 # ==========================================
 FROM alpine:3.18
-RUN apk add --no-cache nginx supervisor tzdata
+RUN apk add --no-cache tzdata ca-certificates
 
 # 设置时区为上海
 ENV TZ=Asia/Shanghai
 
 WORKDIR /app
 
-# 复制后端可执行程序
+# 1. 复制后端可执行程序到当前工作目录
 COPY --from=backend-builder /app/backend/xray-monitor-backend /app/xray-monitor-backend
 
-# 复制前端打包后的静态资源到 Nginx 默认目录
-COPY --from=frontend-builder /app/frontend/dist /usr/share/nginx/html
+# 2. 🔥 核心修正：直接把前端编译产物复制到 Go 能够通过 "./dist" 相对路径访问的地方
+COPY --from=frontend-builder /app/frontend/dist /app/dist
 
-# 覆盖 Nginx 配置文件（标准 EOF 写入，拒绝空行）
-RUN cat << 'EOF' > /etc/nginx/http.d/default.conf
-server {
-    listen 10000;
-    server_name localhost;
-
-    # 前端静态页面
-    location / {
-        root /usr/share/nginx/html;
-        index index.html;
-        try_files $uri $uri/ /index.html;
-    }
-
-    # 后端 API 反代
-    location /api/ {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-EOF
-
-# 使用 Supervisor 同时守护进程（标准 EOF 写入，绝无格式地雷）
-RUN cat << 'EOF' > /etc/supervisord.conf
-[supervisord]
-nodaemon=true
-user=root
-pidfile=/var/run/supervisord.pid
-logfile=/dev/null
-logfile_maxbytes=0
-
-[program:backend]
-command=/app/xray-monitor-backend
-autostart=true
-autorestart=true
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stderr
-stderr_logfile_maxbytes=0
-
-[program:nginx]
-command=nginx -g "daemon off;"
-autostart=true
-autorestart=true
-stdout_logfile=/dev/stdout
-stdout_logfile_maxbytes=0
-stderr_logfile=/dev/stderr
-stderr_logfile_maxbytes=0
-EOF
-
-# 创建可能需要的日志空目录（防御性）
+# 创建需要的日志空目录
 RUN mkdir -p /var/lib/marzban
 
 # 暴露容器内部的 10000 端口
 EXPOSE 10000
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
+# 直接启动 Go 后端，不再通过 supervisor 转手
+CMD ["/app/xray-monitor-backend"]
