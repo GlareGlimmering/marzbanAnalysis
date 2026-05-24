@@ -180,7 +180,7 @@ const selectEntity = async (email: string, ip: string) => {
   selectedEmail.value = email;
   selectedIP.value = ip;
   try {
-    const res = await fetch(`/api/ip-targets?email=${encodeURIComponent(email)}&ip=${encodeURIComponent(ip)}`);
+    const res = await fetch(`api/ip-targets?email=${encodeURIComponent(email)}&ip=${encodeURIComponent(ip)}`);
     if (res.ok) {
       ipSpecificTargets.value = await res.json();
     }
@@ -203,16 +203,16 @@ const copyInboundIP = async (ip: string) => {
 
 const fetchData = async () => {
   try {
-    const overRes = await fetch('/api/overview');
+    const overRes = await fetch('api/overview');
     if (overRes.ok) overview.value = await overRes.json();
 
-    const hierarchyRes = await fetch('/api/user-hierarchy');
+    const hierarchyRes = await fetch('api/user-hierarchy');
     if (hierarchyRes.ok) {
       const hierarchyData = await hierarchyRes.json();
       userHierarchy.value = hierarchyData.sort((a: any, b: any) => a.email.localeCompare(b.email));
     }
 
-    const chartRes = await fetch('/api/charts');
+    const chartRes = await fetch('api/charts');
     if (chartRes.ok) {
       const resData = await chartRes.json();
 
