@@ -52,8 +52,10 @@ func main() {
 	// 允许跨域（方便本地前后端分离联调前端）
 	app.Use(cors.New())
 
+	dataGroup := app.Group("/data")
+
 	// 🛠️ 接口 1: 获取大屏总览数字
-	app.Get("/api/overview", func(c *fiber.Ctx) error {
+	dataGroup.Get("/api/overview", func(c *fiber.Ctx) error {
 		stats, err := store.GetOverviewStats()
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
@@ -62,7 +64,7 @@ func main() {
 	})
 
 	// 🛠️ 接口 2: 获取图表所需的排行数据
-	app.Get("/api/charts", func(c *fiber.Ctx) error {
+	dataGroup.Get("/api/charts", func(c *fiber.Ctx) error {
 		userRanks, outboundRanks, inboundRanks, targetMaps, err := store.GetTopStats()
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
@@ -76,7 +78,7 @@ func main() {
 	})
 
 	// 🛠️ 接口 4: 传入用户和IP，获取双重过滤下的目标排行
-	app.Get("/api/ip-targets", func(c *fiber.Ctx) error {
+	dataGroup.Get("/api/ip-targets", func(c *fiber.Ctx) error {
 		email := c.Query("email")
 		ip := c.Query("ip")
 		if email == "" || ip == "" {
@@ -91,12 +93,18 @@ func main() {
 	})
 
 	// 🛠️ 接口 5: 获取 Email -> IPs 的层级联动树
-	app.Get("/api/user-hierarchy", func(c *fiber.Ctx) error {
+	dataGroup.Get("/api/user-hierarchy", func(c *fiber.Ctx) error {
 		hierarchy, err := store.GetUserIPHierarchy()
 		if err != nil {
 			return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 		}
 		return c.JSON(hierarchy)
+	})
+
+	app.Static("/data", "./dist")
+
+	dataGroup.Get("/*", func(c *fiber.Ctx) error {
+		return c.SendFile("./dist/index.html")
 	})
 
 	// 4. 监听本地 8080 端口
