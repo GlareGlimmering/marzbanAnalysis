@@ -105,6 +105,5 @@ func main() {
 		return c.SendFile("./dist/index.html")
 	})
 
-	// 4. 监听本地 8080 端口
 	log.Fatal(app.Listen(":10000"))
 }
