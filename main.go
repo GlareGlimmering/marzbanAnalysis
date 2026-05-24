@@ -101,12 +101,15 @@ func main() {
 		return c.JSON(hierarchy)
 	})
 
-	app.Static("/data", "./dist")
+	// 🔥 修正点 1：将静态托管和兜底逻辑合并进 dataGroup 内部，严格遵循先后顺序
+	// 允许直接通过 /data 访问到 dist 目录
+	dataGroup.Static("/", "./dist")
 
+	// 🔥 修正点 2：SPA 路由刷新兜底（必须放在静态文件和 API 路由的最后）
 	dataGroup.Get("/*", func(c *fiber.Ctx) error {
 		return c.SendFile("./dist/index.html")
 	})
 
 	// 4. 监听本地 8080 端口
-	log.Fatal(app.Listen(":8080"))
+	log.Fatal(app.Listen(":10000"))
 }
