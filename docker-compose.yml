@@ -7,7 +7,7 @@ services:
     container_name: xray-monitor
     restart: always
     ports:
-      - "127.0.0.1:10000:10000"
+      - "10000:10000"
     volumes:
       - /var/lib/marzban/xray_access.log:/var/lib/marzban/xray_access.log:ro
       - ./data:/app/store/data
